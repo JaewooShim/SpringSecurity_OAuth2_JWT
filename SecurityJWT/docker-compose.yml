@@ -1,0 +1,15 @@
+services:
+  db:
+    container_name: jwt_db
+    image: mysql
+    environment:
+      MYSQL_DATABASE: "jwt_db"
+      MYSQL_USER: ${SPRING_DATASOURCE_USERNAME}
+      MYSQL_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${SPRING_DATASOURCE_ROOT_PASSWORD}
+    ports:
+      - "3305:3306"
+    volumes:
+      - mysqldb:/var/lib/mysql
+volumes:
+  mysqldb:

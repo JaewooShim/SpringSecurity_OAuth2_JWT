@@ -1,0 +1,17 @@
+  services:
+    db:
+      container_name: OAuth_db
+      image: mysql
+      restart: always
+      environment:
+        MYSQL_ROOT_PASSWORD: ${SPRING_DATASOURCE_ROOT_PASS}
+        MYSQL_DATABASE: ${SPRING_DATASOURCE_DB}
+        MYSQL_USER: ${SPRING_DATASOURCE_USERNAME}
+        MYSQL_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
+      ports:
+        - "3307:3306"
+      volumes:
+        - mysql_db:/var/lib/mysql
+        - ./db/init:/docker-entrypoint-initdb.d:ro
+  volumes:
+    mysql_db:

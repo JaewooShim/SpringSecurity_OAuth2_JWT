@@ -1,6 +1,7 @@
 package com.OAuthDemo.OAuthJWT.oauth2;
 
 import com.OAuthDemo.OAuthJWT.dto.CustomOAuth2User;
+import com.OAuthDemo.OAuthJWT.dto.CustomOIDCUser;
 import com.OAuthDemo.OAuthJWT.jwt.JWTUtils;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
@@ -8,6 +9,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
 
@@ -28,15 +30,26 @@ public class CustomSuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication)
             throws IOException, ServletException {
-        CustomOAuth2User customOAuth2User = (CustomOAuth2User) authentication.getPrincipal();
+        Object principal = authentication.getPrincipal();
+        String username = null;
+        String role = null;
 
-        String username = customOAuth2User.getUserName();
+        if (principal instanceof CustomOIDCUser customOIDCUser) {
+            username = customOIDCUser.getUsername();
 
-        String role = customOAuth2User.getAuthorities().iterator().next().getAuthority();
+            role = customOIDCUser.getAuthorities().iterator().next().getAuthority();
+        } else if (principal instanceof  CustomOAuth2User customOAuth2User) {
+            username = customOAuth2User.getUserName();
 
-        String jwt = jwtUtils.generateJWT(username, role);
-        response.addCookie(createCookie(jwt));
-        response.sendRedirect("http://localhost:3000/");
+            role = customOAuth2User.getAuthorities().iterator().next().getAuthority();
+        }
+        try {
+            String jwt = jwtUtils.generateJWT(username, role);
+            response.addCookie(createCookie(jwt));
+            response.sendRedirect("http://localhost:3000/");
+        } catch (Exception e) {
+            System.err.println(e.getMessage());
+        }
     }
 
     private Cookie createCookie(String value) {

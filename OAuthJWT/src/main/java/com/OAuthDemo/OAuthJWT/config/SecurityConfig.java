@@ -53,7 +53,7 @@ public class SecurityConfig {
 
         http.authorizeHttpRequests((requests) ->
                 (requests
-                        .requestMatchers("/").permitAll()
+                        .requestMatchers("/", "/login").permitAll()
                         .anyRequest()).authenticated());
         http.sessionManagement(session ->
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));

@@ -24,41 +24,41 @@ public class JWTFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
-        String authorization = null;
-        Cookie[] cookies = request.getCookies();
+        try {
+            String authorization = null;
+            Cookie[] cookies = request.getCookies();
 
-        for (Cookie cookie: cookies) {
-            System.out.println(cookie.getName());
+            for (Cookie cookie : cookies) {
+                System.out.println(cookie.getName());
 
-            if (cookie.getName().equals("Authorization")) {
-                authorization = cookie.getValue();
+                if (cookie.getName().equals("Authorization")) {
+                    authorization = cookie.getValue();
+                }
             }
+
+            String token = authorization;
+            if (!jwtUtils.validateJWT(token)) {
+                System.out.println("Invalid JWT token");
+                filterChain.doFilter(request, response);
+            }
+
+            String username = jwtUtils.extractUsername(token);
+            String role = jwtUtils.extractRole(token);
+
+            UserDTO userDTO = new UserDTO();
+            userDTO.setName(username);
+            userDTO.setRole(role);
+
+            CustomOAuth2User customOAuth2User = new CustomOAuth2User(userDTO);
+            UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                    customOAuth2User,
+                    null,
+                    customOAuth2User.getAuthorities()
+            );
+            SecurityContextHolder.getContext().setAuthentication(authToken);
+        } catch (Exception e) {
+            System.err.println(e.getMessage());
         }
-
-        if (authorization == null) {
-            filterChain.doFilter(request, response);
-            return;
-        }
-        String token = authorization;
-        if (!jwtUtils.validateJWT(token)) {
-            System.out.println("Invalid JWT token");
-            filterChain.doFilter(request, response);
-        }
-
-        String username = jwtUtils.extractUsername(token);
-        String role = jwtUtils.extractRole(token);
-
-        UserDTO userDTO = new UserDTO();
-        userDTO.setName(username);
-        userDTO.setRole(role);
-
-        CustomOAuth2User customOAuth2User = new CustomOAuth2User(userDTO);
-        UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                customOAuth2User,
-                null,
-                customOAuth2User.getAuthorities()
-        );
-        SecurityContextHolder.getContext().setAuthentication(authToken);
         filterChain.doFilter(request, response);
     }
 }

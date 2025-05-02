@@ -29,8 +29,8 @@ public class JoinController {
         return "ok";
     }
 
-    @PostMapping("/login")
-    public ResponseEntity<?> loginProcess(@RequestBody LoginDTO loginDTO) {
-        return loginService.authenticate(loginDTO);
-    }
+//    @PostMapping("/login")
+//    public ResponseEntity<?> loginProcess(@RequestBody LoginDTO loginDTO) {
+//        return loginService.authenticate(loginDTO);
+//    }
 }

@@ -2,6 +2,7 @@ package com.example.SecurityJWT.config;
 
 import com.example.SecurityJWT.jwt.JWTFilter;
 import com.example.SecurityJWT.jwt.JWTUtils;
+import com.example.SecurityJWT.jwt.LoginFilter;
 import com.example.SecurityJWT.repository.UserRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.context.annotation.Bean;
@@ -52,7 +53,7 @@ public class SecurityConfig {
 
         http.authorizeHttpRequests((requests) ->
                 ((AuthorizeHttpRequestsConfigurer.AuthorizedUrl)requests
-                        .requestMatchers("/login", "/", "/join").permitAll()
+                        .requestMatchers("/login", "/join").permitAll()
                         .requestMatchers("/admin").hasRole("ADMIN")
                         .anyRequest()).authenticated());
 
@@ -76,7 +77,7 @@ public class SecurityConfig {
                     }
                 }
         ));
-
+        http.addFilterAt(new LoginFilter(authenticationManager(authenticationConfiguration), jwtUtils), UsernamePasswordAuthenticationFilter.class);
         http.addFilterBefore(jwtFilter(), UsernamePasswordAuthenticationFilter.class);
         return (SecurityFilterChain)http.build();
     }

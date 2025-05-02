@@ -2,29 +2,39 @@ package com.OAuthDemo.OAuthJWT.oauth2;
 
 import com.OAuthDemo.OAuthJWT.dto.CustomOAuth2User;
 import com.OAuthDemo.OAuthJWT.dto.CustomOIDCUser;
+import com.OAuthDemo.OAuthJWT.entity.RefreshEntity;
 import com.OAuthDemo.OAuthJWT.jwt.JWTUtils;
+import com.OAuthDemo.OAuthJWT.repository.RefreshRepository;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.util.Date;
 
 @Component
 public class CustomSuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
 
     private final JWTUtils jwtUtils;
 
-    @Value("${spring.jwt.expireMs}")
-    private int jwtExpire;
+    @Value("${spring.jwt.access.expireMs}")
+    private int jwtAccessExpire;
 
-    public CustomSuccessHandler(JWTUtils jwtUtils) {
+    @Value("${spring.jwt.refresh.expireMs}")
+    private int jwtRefreshExpire;
+
+    private final RefreshRepository refreshRepository;
+
+    public CustomSuccessHandler(JWTUtils jwtUtils, RefreshRepository refreshRepository) {
         this.jwtUtils = jwtUtils;
+        this.refreshRepository = refreshRepository;
     }
 
     @Override
@@ -44,17 +54,31 @@ public class CustomSuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
             role = customOAuth2User.getAuthorities().iterator().next().getAuthority();
         }
         try {
-            String jwt = jwtUtils.generateJWT(username, role);
-            response.addCookie(createCookie(jwt));
-            response.sendRedirect("http://localhost:3000/");
+            String access = jwtUtils.generateJWT("access", username, role, jwtAccessExpire);
+            String refresh = jwtUtils.generateJWT("refresh", username, role, jwtRefreshExpire);
+
+            // store refresh token in db
+            addRefreshEntity(username, refresh);
+
+            response.setHeader("access", access);
+            response.addCookie(createCookie("refresh", refresh));
+            response.setStatus(HttpStatus.OK.value());
+            response.sendRedirect("http://localhost:3000");
         } catch (Exception e) {
             System.err.println(e.getMessage());
         }
     }
 
-    private Cookie createCookie(String value) {
-        Cookie cookie = new Cookie("Authorization", value);
-        cookie.setMaxAge(jwtExpire);
+    private void addRefreshEntity(String username, String refresh) {
+        Date date = new Date(System.currentTimeMillis() + jwtRefreshExpire);
+
+        RefreshEntity refreshEntity = new RefreshEntity(refresh, username, date.toString());
+        refreshRepository.save(refreshEntity);
+    }
+
+    private Cookie createCookie(String key, String value) {
+        Cookie cookie = new Cookie(key, value);
+        cookie.setMaxAge(jwtRefreshExpire);
 //        cookie.setSecure(true); https only
         cookie.setPath("/");
         cookie.setHttpOnly(true);

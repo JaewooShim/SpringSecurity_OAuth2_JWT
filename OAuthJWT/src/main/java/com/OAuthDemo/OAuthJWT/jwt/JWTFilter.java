@@ -13,6 +13,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 
 public class JWTFilter extends OncePerRequestFilter {
     private final JWTUtils jwtUtils;
@@ -24,41 +25,68 @@ public class JWTFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
+//        try {
+//            String authorization = null;
+//            Cookie[] cookies = request.getCookies();
+//
+//            for (Cookie cookie : cookies) {
+//                System.out.println(cookie.getName());
+//
+//                if (cookie.getName().equals("Authorization")) {
+//                    authorization = cookie.getValue();
+//                }
+//            }
+//
+//            String token = authorization;
+//            if (!jwtUtils.validateJWT(token)) {
+//                System.out.println("Invalid JWT token");
+//                filterChain.doFilter(request, response);
+//            }
+//
+//            String username = jwtUtils.extractUsername(token);
+//            String role = jwtUtils.extractRole(token);
+//
+//            UserDTO userDTO = new UserDTO();
+//            userDTO.setName(username);
+//            userDTO.setRole(role);
+//
+//            CustomOAuth2User customOAuth2User = new CustomOAuth2User(userDTO);
+//            UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+//                    customOAuth2User,
+//                    null,
+//                    customOAuth2User.getAuthorities()
+//            );
+//            SecurityContextHolder.getContext().setAuthentication(authToken);
+//        } catch (Exception e) {
+//            System.err.println(e.getMessage());
+//        }
+//        filterChain.doFilter(request, response);
+        String accessToken = request.getHeader("access");
+        if (accessToken == null) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         try {
-            String authorization = null;
-            Cookie[] cookies = request.getCookies();
-
-            for (Cookie cookie : cookies) {
-                System.out.println(cookie.getName());
-
-                if (cookie.getName().equals("Authorization")) {
-                    authorization = cookie.getValue();
-                }
-            }
-
-            String token = authorization;
-            if (!jwtUtils.validateJWT(token)) {
-                System.out.println("Invalid JWT token");
-                filterChain.doFilter(request, response);
-            }
-
-            String username = jwtUtils.extractUsername(token);
-            String role = jwtUtils.extractRole(token);
+            jwtUtils.validateJWT(accessToken);
+            String username = jwtUtils.extractUsername(accessToken);
+            String role = jwtUtils.extractRole(accessToken);
 
             UserDTO userDTO = new UserDTO();
-            userDTO.setName(username);
             userDTO.setRole(role);
+            userDTO.setName(username);
 
             CustomOAuth2User customOAuth2User = new CustomOAuth2User(userDTO);
-            UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                    customOAuth2User,
+            UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(customOAuth2User,
                     null,
-                    customOAuth2User.getAuthorities()
-            );
+                    customOAuth2User.getAuthorities());
             SecurityContextHolder.getContext().setAuthentication(authToken);
+            filterChain.doFilter(request, response);
         } catch (Exception e) {
-            System.err.println(e.getMessage());
+            PrintWriter writer = response.getWriter();
+            writer.println(e.getMessage());
+
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         }
-        filterChain.doFilter(request, response);
     }
 }
